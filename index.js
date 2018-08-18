@@ -54,6 +54,8 @@ const coins = {
     }
 }
 
+let weebshitMode = false;
+
 const commands = {
     async help(msg) {
         await msg.channel.createMessage({embed: {
@@ -106,8 +108,9 @@ const commands = {
         await msg.channel.createMessage({embed: {
             title: 'Coins Supported',
             description: coinsSupported,
+            footer: { text: 'When using a command with the parameter "coin", provide the full name (such as bitcoin).', icon_url: 'attachment://coin.png' },
             color: 0x36393f
-        }});
+        }}, { file: await require('util').promisify(fs.readFile)(path.resolve('./img/bitcoin.png')), name: 'coin.png' });
     },
     async address(msg, args) {
         if (args.length < 2) {
@@ -138,7 +141,7 @@ const commands = {
                     msgStr += addresses[coin];
                 }
                 await msg.channel.createMessage({embed: {
-                    title: 'Addresses for ' + msg.author.username,
+                    title: !weebshitMode ? 'Addresses for ' + msg.author.username : 'H-here\'s the addresses for ' + msg.author.username + ', s-senpai~',
                     description: msgStr,
                     color: 0x36393f
                 }});
@@ -160,7 +163,7 @@ const commands = {
                     }
                     await msg.channel.createMessage({
                         embed: {
-                            title: 'Addresses for ' + (await bot.getRESTUser(id[1])).username,
+                            title: !weebshitMode ? 'Addresses for ' + (await bot.getRESTUser(id[1])).username : 'H-here\'s the addresses for ' + (await bot.getRESTUser(id[1])).username + ', s-senpai~',
                             description: msgStr,
                             color: 0x36393f
                         }
@@ -195,7 +198,7 @@ const commands = {
                 value += ':euro: ' + (json.EUR * amount).toFixed(2) + ' EUR\n';
                 value += ':yen: ' + (json.JPY * amount).toFixed(2) + ' JPY';
                 await msg.channel.createMessage({embed: {
-                    title: 'Price Conversion',
+                    title: !weebshitMode ? 'Price Conversion' : 'Here\'s the prices for you, s-senpai~',
                     thumbnail: { url: 'attachment://coin.png' },
                     //description: '1 ' + coins[args[0]].short + ' is worth ' + json.USD + ' USD.',
                     fields: [
@@ -215,6 +218,12 @@ const commands = {
         if (msg.author.id === '96269247411400704') {
             await msg.channel.createMessage(success + 'CryptoBot is restarting...');
             require('child_process').exec('pm2 restart cryptobot');
+        }
+    },
+    async weebshit(msg) {
+        if (msg.author.id === '96269247411400704') {
+            weebshitMode = !weebshitMode;
+            await msg.channel.createMessage(success + 'Weebshit mode toggled.' + (weebshitMode ? ' I hope you know what you\'re doing.' : ''));
         }
     }
 }

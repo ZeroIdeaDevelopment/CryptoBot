@@ -61,7 +61,8 @@ const commands = {
         await msg.channel.createMessage({embed: {
             title: 'CryptoBot Help',
             description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price',
-            color: 0x36393f
+            color: 0x36393f,
+            footer: { text: 'https://github.com/ZeroIdeaDevelopment/CryptoBot' }
         }});
     },
     async credits(msg) {

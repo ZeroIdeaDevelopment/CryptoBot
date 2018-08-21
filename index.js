@@ -281,7 +281,7 @@ const commands = {
                                     embed.description += '\n\n<a:icworking:440090198500573184>  |  Awaiting deposit...'
                                     await m.edit({ content: '', embed });
                                     transactionTimeout = setTimeout(async () => {
-                                        
+                                        clearInterval(interval);
                                         embed.description = initialDesc;
                                         embed.description += '\n\n' + error + 'The transaction has timed out and CryptoBot will stop regarding any events relating to it.'
                                         await m.edit({ content: '', embed });

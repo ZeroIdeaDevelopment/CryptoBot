@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const fetch = require('node-fetch');
 const dutb = require('data-uri-to-buffer');
+const vm = require('vm');
 
 const success = '<:iccheck:435574370107129867>  |  ';
 const error = '<:icerror:435574504522121216>  |  ';
@@ -60,10 +61,10 @@ const commands = {
     async help(msg) {
         await msg.channel.createMessage({embed: {
             title: 'CryptoBot Help',
-            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price',
+            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price\nshapeshift - turn one coin into another',
             color: 0x36393f,
-            footer: { text: 'https://github.com/ZeroIdeaDevelopment/CryptoBot' }
-        }});
+            footer: { icon_url: 'attachment://shapeshift.png', text: 'ShapeShift onboard | https://github.com/ZeroIdeaDevelopment/CryptoBot' }
+        }}, { file: await require('util').promisify(fs.readFile)(path.resolve('./img/shapeshift.png')), name: 'shapeshift.png' });
     },
     async credits(msg) {
         await msg.channel.createMessage({embed: {
@@ -215,6 +216,126 @@ const commands = {
             }
         }
     },
+    async shapeshift(msg, args) {
+        if (args.length < 2) {
+            await msg.channel.createMessage('To change one coin into another, use `crypto shapeshift <input coin> <output coin>`. You can use `crypto coins` to see supported coins.');
+        } else {
+            if (coins[args[0]] !== undefined) {
+                if (coins[args[1]] !== undefined) {
+                    let hasAddressKey = await db[`addresses:${msg.author.id}`].exists();
+                    if (hasAddressKey) {
+                        let addresses = await db[`addresses:${msg.author.id}`].get;
+                        let inputAddr = addresses[args[0]];
+                        let outputAddr = addresses[args[1]];
+                        if (inputAddr !== undefined) {
+                            if (outputAddr !== undefined) {
+                                let m = await msg.channel.createMessage(success + 'Creating your transaction, this may take a minute...');
+                                let body1 = {
+                                    pair: coins[args[0]].short + '_' + coins[args[1]].short,
+                                    withdrawal: outputAddr,
+                                    returnAddress: inputAddr
+                                };
+                                let res1 = await fetch('https://shapeshift.io/shift', {
+                                    method: 'POST',
+                                    body: JSON.stringify(body1),
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                                let res2 = await fetch('https://shapeshift.io/rate/' + body1.pair);
+                                let res3 = await fetch('https://shapeshift.io/limit/' + body1.pair);
+                                let json1 = await res1.json();
+                                let json2 = await res2.json();
+                                let json3 = await res3.json();
+                                let embed = {
+                                    title: 'ShapeShift',
+                                    thumbnail: { url: 'https://info.shapeshift.io/sites/default/files/fav_icon.png' },
+                                    description: 'You are converting from ' + json1.depositType + ' to ' + json1.withdrawalType + '. This transaction will timeout after 10 minutes.',
+                                        fields: [
+                                            {
+                                                name: 'Deposit Address',
+                                                value: json1.deposit,
+                                                inline: true
+                                            },
+                                            {
+                                                name: 'Withdrawal Address',
+                                                value: json1.withdrawal,
+                                                inline: true
+                                            },
+                                            {
+                                                name: 'Conversion Rate',
+                                                value: '1 ' + json1.depositType + ' is ' + json2.rate + ' ' + json1.withdrawalType
+                                            },
+                                            {
+                                                name: 'Limit',
+                                                value: 'You can convert up to ' + json3.limit + ' ' + json1.depositType
+                                            }
+                                        ],
+                                            color: 0x36393f
+                                };
+                                if (json1.error !== undefined) {
+                                    m.edit(error + 'There was an issue creating your transaction. Please try again later.');
+                                } else {
+                                    await m.edit({ content: '', embed });
+                                    let interval = null;
+                                    let transactionTimeout = null;
+                                    let initialDesc = embed.description;
+                                    embed.description += '\n\n<a:icworking:440090198500573184>  |  Awaiting deposit...'
+                                    await m.edit({ content: '', embed });
+                                    transactionTimeout = setTimeout(async () => {
+                                        let res = await fetch('https://shapeshift.io/cancelpending', {
+                                            method: 'POST',
+                                            body: JSON.stringify({
+                                                address: json1.deposit
+                                            }),
+                                            headers: { 'Content-Type': 'application/json' }
+                                        });
+                                        let json = await res.json();
+                                        if (json.success !== undefined) {
+                                            embed.description = initialDesc;
+                                            embed.description += '\n\n' + error + 'The transaction has been cancelled because the timeout was reached.'
+                                            await m.edit({ content: '', embed });
+                                            clearInterval(interval);
+                                        } else {
+                                            console.log('A transaction could not be cancelled. !! THIS IS BAD !! (' + json1.deposit + ')');
+                                            console.log(json);
+                                        }
+                                    }, 1000 * 60 * 10);
+                                    interval = setInterval(async () => {
+                                        let status = await fetch('https://shapeshift.io/txStat/' + json1.deposit);
+                                        let json = await status.json();
+                                        if (json.status !== 'no_deposits') {
+                                            if (json.status === 'received') {
+                                                embed.description = initialDesc;
+                                                embed.description += '\n\n<a:icworking:440090198500573184>  |  ShapeShift has received the deposit. It is now being exchanged.'
+                                                clearTimeout(transactionTimeout); // can't cancel after this point, might as well clear it
+                                                console.log(json1.deposit + ' is now in status `received`.');
+                                            } else if (json.status === 'complete') {
+                                                embed.description = initialDesc;
+                                                embed.description += '\n\n' + success + 'ShapeShift has finished the exchange.'
+                                                clearInterval(interval);
+                                                console.log(json1.deposit + ' is now in status `complete`.');
+                                            }
+                                            await m.edit({ content: '', embed });
+                                        }
+                                    }, 30000);
+                                    
+                                }
+                            } else {
+                                await msg.channel.createMessage(error + 'You don\'t have an address set up for the output coin!');
+                            }
+                        } else {
+                            await msg.channel.createMessage(error + 'You don\'t have an address set up for the input coin!');
+                        }
+                    } else {
+                        await msg.channel.createMessage(error + 'You don\'t have any addresses set up!');
+                    }
+                } else {
+                    await msg.channel.createMessage(error + 'The output coin isn\'t supported. You can use `crypto coins` to see supported coins.');
+                }
+            } else {
+                await msg.channel.createMessage(error + 'The input coin isn\'t supported. You can use `crypto coins` to see supported coins.');
+            }
+        }
+    },
     async die(msg) {
         if (msg.author.id === '96269247411400704') {
             await msg.channel.createMessage(success + 'CryptoBot is restarting...');
@@ -225,6 +346,31 @@ const commands = {
         if (msg.author.id === '96269247411400704') {
             weebshitMode = !weebshitMode;
             await msg.channel.createMessage(success + 'Weebshit mode toggled.' + (weebshitMode ? ' I hope you know what you\'re doing.' : ''));
+        }
+    },
+    async eval(msg, args) {
+        if (msg.author.id === '96269247411400704') {
+            let context = {
+                ctx: {
+                    bot,
+                    msg,
+                    channel: msg.channel,
+                    db
+                }
+            }
+            let out = '```';
+            try {
+                vm.runInNewContext(`function execute() {
+    ${args.join(' ')}
+}
+
+result = execute();`, context, { filename: 'cryptobot.vm' });
+                out += context.result;
+            } catch (e) {
+                out += e.stack;
+            }
+            out += '```';
+            await msg.channel.createMessage(out);
         }
     }
 }

@@ -248,7 +248,7 @@ const commands = {
                                 let embed = {
                                     title: 'ShapeShift',
                                     thumbnail: { url: 'https://info.shapeshift.io/sites/default/files/fav_icon.png' },
-                                    description: 'You are converting from ' + json1.depositType + ' to ' + json1.withdrawalType + '. This transaction will timeout after 10 minutes.',
+                                    description: 'You are converting from ' + json1.depositType + ' to ' + json1.withdrawalType + '. This transaction will timeout after 5 minutes and CryptoBot will stop updating its status.',
                                         fields: [
                                             {
                                                 name: 'Deposit Address',
@@ -281,24 +281,11 @@ const commands = {
                                     embed.description += '\n\n<a:icworking:440090198500573184>  |  Awaiting deposit...'
                                     await m.edit({ content: '', embed });
                                     transactionTimeout = setTimeout(async () => {
-                                        let res = await fetch('https://shapeshift.io/cancelpending', {
-                                            method: 'POST',
-                                            body: JSON.stringify({
-                                                address: json1.deposit
-                                            }),
-                                            headers: { 'Content-Type': 'application/json' }
-                                        });
-                                        let json = await res.json();
-                                        if (json.success !== undefined) {
-                                            embed.description = initialDesc;
-                                            embed.description += '\n\n' + error + 'The transaction has been cancelled because the timeout was reached.'
-                                            await m.edit({ content: '', embed });
-                                            clearInterval(interval);
-                                        } else {
-                                            console.log('A transaction could not be cancelled. !! THIS IS BAD !! (' + json1.deposit + ')');
-                                            console.log(json);
-                                        }
-                                    }, 1000 * 60 * 10);
+                                        
+                                        embed.description = initialDesc;
+                                        embed.description += '\n\n' + error + 'The transaction has timed out and CryptoBot will stop regarding any events relating to it.'
+                                        await m.edit({ content: '', embed });
+                                    }, 1000 * 60 * 5);
                                     interval = setInterval(async () => {
                                         let status = await fetch('https://shapeshift.io/txStat/' + json1.deposit);
                                         let json = await status.json();

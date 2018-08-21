@@ -283,7 +283,7 @@ const commands = {
                                     transactionTimeout = setTimeout(async () => {
                                         clearInterval(interval);
                                         embed.description = initialDesc;
-                                        embed.description += '\n\n' + error + 'The transaction has timed out and CryptoBot will stop regarding any events relating to it.'
+                                        embed.description += '\n\n' + error + 'The transaction has timed out and CryptoBot will stop listening to any events relating to it.'
                                         await m.edit({ content: '', embed });
                                     }, 1000 * 60 * 5);
                                     interval = setInterval(async () => {

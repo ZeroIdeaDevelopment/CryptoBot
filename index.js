@@ -15,6 +15,7 @@ const vm = require('vm');
 
 const success = '<:iccheck:435574370107129867>  |  ';
 const error = '<:icerror:435574504522121216>  |  ';
+const working = '<a:icworking:440090198500573184>  |  ';
 
 const coins = {
     bitcoin: {
@@ -55,13 +56,15 @@ const coins = {
     }
 }
 
+let usersMining = [];
+
 let weebshitMode = false;
 
 const commands = {
     async help(msg) {
         await msg.channel.createMessage({embed: {
             title: 'CryptoBot Help',
-            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price\nshapeshift - turn one coin into another',
+            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price\nshapeshift - turn one coin into another\nv - vCurrency',
             color: 0x36393f,
             footer: { icon_url: 'attachment://shapeshift.png', text: 'ShapeShift onboard | https://github.com/ZeroIdeaDevelopment/CryptoBot' }
         }}, { file: await require('util').promisify(fs.readFile)(path.resolve('./img/shapeshift.png')), name: 'shapeshift.png' });
@@ -69,7 +72,7 @@ const commands = {
     async credits(msg) {
         await msg.channel.createMessage({embed: {
             title: 'Credits',
-            description: 'Some parts of the bot are powered by cryptocompare.com.\nRegexes for addresses are provided by k4m4\'s modules and/or community submission.',
+            description: 'Some parts of the bot are powered by cryptocompare.com.\nRegexes for addresses are provided by k4m4\'s modules and/or community submission.\n<@103832588556193792> (jmeel#2147) for making the profile picture.',
             color: 0x36393f
         }})
     },
@@ -209,6 +212,7 @@ const commands = {
                             value
                         }
                     ],
+                    timestamp: new Date(),
                     color: 0x36393f
                 }}, { file: await require('util').promisify(fs.readFile)(path.resolve('./img/' + args[0] + '.png')), name: 'coin.png' });
             } else {
@@ -229,7 +233,7 @@ const commands = {
                         let outputAddr = addresses[args[1]];
                         if (inputAddr !== undefined) {
                             if (outputAddr !== undefined) {
-                                let m = await msg.channel.createMessage(success + 'Creating your transaction, this may take a minute...');
+                                let m = await msg.channel.createMessage(working + 'Creating your transaction, this may take a minute...');
                                 let body1 = {
                                     pair: coins[args[0]].short + '_' + coins[args[1]].short,
                                     withdrawal: outputAddr,
@@ -278,7 +282,7 @@ const commands = {
                                     let interval = null;
                                     let transactionTimeout = null;
                                     let initialDesc = embed.description;
-                                    embed.description += '\n\n<a:icworking:440090198500573184>  |  Awaiting deposit...'
+                                    embed.description += '\n\n' + working + 'Awaiting deposit...'
                                     await m.edit({ content: '', embed });
                                     transactionTimeout = setTimeout(async () => {
                                         clearInterval(interval);
@@ -292,7 +296,7 @@ const commands = {
                                         if (json.status !== 'no_deposits') {
                                             if (json.status === 'received') {
                                                 embed.description = initialDesc;
-                                                embed.description += '\n\n<a:icworking:440090198500573184>  |  ShapeShift has received the deposit. It is now being exchanged.'
+                                                embed.description += '\n\n' + working + 'ShapeShift has received the deposit. It is now being exchanged.'
                                                 clearTimeout(transactionTimeout); // can't cancel after this point, might as well clear it
                                                 console.log(json1.deposit + ' is now in status `received`.');
                                             } else if (json.status === 'complete') {
@@ -320,6 +324,90 @@ const commands = {
                 }
             } else {
                 await msg.channel.createMessage(error + 'The input coin isn\'t supported. You can use `crypto coins` to see supported coins.');
+            }
+        }
+    },
+    async v(msg, args) {
+        if (args.length < 1) {
+            await msg.channel.createMessage('This is the command for the entirety of CryptoBot\'s vCurrency (known as CBC). Get started by running `crypto v openaccount` to open an account! Use `crypto v help` to get more information on commands.');
+        } else {
+            if (args[0] === 'help') {
+                await msg.channel.createMessage({
+                    embed: {
+                        title: 'CryptoBot vCurrency Help',
+                        description: 'help - this message\nopenaccount - open an account\ncloseaccount - close an account\nbalance - get how much CBC you have\nmine - mine some CBC',
+                        color: 0x36393f
+                    }
+                });
+            } else if (args[0] === 'openaccount') {
+                let hasAccount = await db[`account:${msg.author.id}`].exists();
+                if (hasAccount) {
+                    await msg.channel.createMessage(error + 'You already have an account!');
+                } else {
+                    let accCreationMsg = await msg.channel.createMessage(working + 'Creating your account...');
+                    await db[`account:${msg.author.id}`].accountTotal.set(0);
+                    await db[`account:${msg.author.id}`].isMining.set(false);
+                    await accCreationMsg.edit(success + 'You have opened an account with CryptoBot vCurrency. Run `crypto v help` to get more information!');
+                }
+            } else if (args[0] === 'closeaccount') {
+                let hasAccount = await db[`account:${msg.author.id}`].exists();
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account!');
+                } else {
+                    if (args.length < 2) {
+                        await msg.channel.createMessage('Are you sure you want to close your account? Run this command again with the `confirm` argument if you are sure. You will lose all CBC inside your account.');
+                    } else { 
+                        if (args[1] === 'confirm') {
+                            let accDeletionMsg = await msg.channel.createMessage(working + 'Closing your account...');
+                            await db[`account:${msg.author.id}`].delete();
+                            await accDeletionMsg.edit(success + 'You have closed your account with CryptoBot vCurrency.');
+                        } else {
+                            await msg.channel.createMessage(error + 'Invalid arguments.'); 
+                        }
+                    }
+                }
+            } else if (args[0] === 'mine') {
+                let hasAccount = await db[`account:${msg.author.id}`].exists();
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    await db[`account:${msg.author.id}`].isMining.delete();
+                    let isMining = usersMining.includes(msg.author.id);
+                    if (isMining) {
+                        await msg.channel.createMessage(error + 'You\'re already mining!');
+                    } else {
+                        let miningMsg = await msg.channel.createMessage(working + 'Mining, this takes between 1 and 2 minutes...');
+                        let min = Math.ceil(60);
+                        let max = Math.floor(120);
+                        let randomizedTime = Math.floor(Math.random() * (max - min)) + min;
+                        console.log('mining for ' + randomizedTime + ' seconds');
+                        setTimeout(async () => {
+                            let res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=BTC', {
+                                method: 'GET'
+                            });
+                            let json = await res.json();
+                            let amount = json.BTC;
+                            let prevTotal = await db[`account:${msg.author.id}`].accountTotal.get;
+                            await db[`account:${msg.author.id}`].accountTotal.set(prevTotal + amount);
+                            usersMining.splice(usersMining.indexOf(msg.author.id), 1);
+                            let awardMsg = success + 'You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
+                            await miningMsg.edit(awardMsg);
+                            let dm = await bot.getDMChannel(msg.author.id);
+                            dm.createMessage(awardMsg);
+                        }, randomizedTime * 1000);
+                        usersMining.push(msg.author.id);
+                    }
+                }
+            } else if (args[0] === 'balance') {
+                let hasAccount = await db[`account:${msg.author.id}`].exists();
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    let balance = await db[`account:${msg.author.id}`].accountTotal.get;
+                    await msg.channel.createMessage('You have ' + balance + ' CBC.');
+                }
+            } else {
+                await msg.channel.createMessage(error + 'Invalid command! Run `crypto v help` for help!');
             }
         }
     },
@@ -383,3 +471,7 @@ bot.on('ready', () => {
 		type: 3
     }); // Watching the prices of cryptocurrency | crypto help
 });
+
+function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
+}

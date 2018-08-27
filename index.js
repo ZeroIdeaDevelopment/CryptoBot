@@ -331,6 +331,7 @@ const commands = {
         if (args.length < 1) {
             await msg.channel.createMessage('This is the command for the entirety of CryptoBot\'s vCurrency (known as CBC). Get started by running `crypto v openaccount` to open an account! Use `crypto v help` to get more information on commands.');
         } else {
+            let hasAccount = await db[`account:${msg.author.id}`].exists();
             switch (args[0]) {
                 case 'help':
                 await msg.channel.createMessage({
@@ -343,7 +344,6 @@ const commands = {
                 break;
 
                 case 'openaccount':
-                let hasAccount = await db[`account:${msg.author.id}`].exists();
                 if (hasAccount) {
                     await msg.channel.createMessage(error + 'You already have an account!');
                 } else {
@@ -354,7 +354,7 @@ const commands = {
                 break;
 
                 case 'closeaccount':
-                let hasAccount = await db[`account:${msg.author.id}`].exists();
+                
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account!');
                 } else {
@@ -373,7 +373,6 @@ const commands = {
                 break;
 
                 case 'mine':
-                let hasAccount = await db[`account:${msg.author.id}`].exists();
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
@@ -407,7 +406,6 @@ const commands = {
                 break;
 
                 case 'balance':
-                let hasAccount = await db[`account:${msg.author.id}`].exists();
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {

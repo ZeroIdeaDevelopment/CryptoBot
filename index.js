@@ -355,19 +355,22 @@ const commands = {
                 break;
 
                 case 'closeaccount':
-                
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account!');
                 } else {
-                    if (args.length < 2) {
-                        await msg.channel.createMessage('<:ictrash:445293877629419532>  |  Are you sure you want to close your account? Run this command again with the `confirm` argument if you are sure. You will lose all CBC inside your account.');
-                    } else { 
-                        if (args[1] === 'confirm') {
-                            let accDeletionMsg = await msg.channel.createMessage(working + 'Closing your account...');
-                            await db[`account:${msg.author.id}`].delete();
-                            await accDeletionMsg.edit(success + 'You have closed your account with CryptoBot vCurrency.');
+                    if (usersMining.includes(msg.author.id)) {
+                        await msg.channel.createMessage(error + 'You are currently mining!');
+                    } else {
+                        if (args.length < 2) {
+                            await msg.channel.createMessage('<:ictrash:445293877629419532>  |  Are you sure you want to close your account? Run this command again with the `confirm` argument if you are sure. You will lose all CBC inside your account.');
                         } else {
-                            await msg.channel.createMessage(error + 'Invalid arguments.'); 
+                            if (args[1] === 'confirm') {
+                                let accDeletionMsg = await msg.channel.createMessage(working + 'Closing your account...');
+                                await db[`account:${msg.author.id}`].delete();
+                                await accDeletionMsg.edit(success + 'You have closed your account with CryptoBot vCurrency.');
+                            } else {
+                                await msg.channel.createMessage(error + 'Invalid arguments.');
+                            }
                         }
                     }
                 }

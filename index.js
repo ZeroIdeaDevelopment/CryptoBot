@@ -15,6 +15,7 @@ const vm = require('vm');
 
 const success = '<:iccheck:435574370107129867>  |  ';
 const error = '<:icerror:435574504522121216>  |  ';
+const info = '<:icinfo:435576029680238593>  |  ';
 const working = '<a:icworking:440090198500573184>  |  ';
 
 const coins = {
@@ -78,7 +79,7 @@ const commands = {
     },
     async code(msg, args) {
         if (args.length < 1) {
-            await msg.channel.createMessage('To generate a code, use `crypto code <coin>`. You can use `crypto coins` to see supported coins.');
+            await msg.channel.createMessage(info + 'To generate a code, use `crypto code <coin>`. You can use `crypto coins` to see supported coins.');
         } else {
             if (coins[args[0]] !== undefined) {
                 let hasAddressKey = await db[`addresses:${msg.author.id}`].exists();
@@ -119,7 +120,7 @@ const commands = {
     },
     async address(msg, args) {
         if (args.length < 2) {
-            await msg.channel.createMessage('To set an address, use `crypto address <coin> <address>`. You can use `crypto coins` to see supported coins.');
+            await msg.channel.createMessage(info + 'To set an address, use `crypto address <coin> <address>`. You can use `crypto coins` to see supported coins.');
         } else {
             if (coins[args[0]] !== undefined) {
                 if (coins[args[0]].regex.test(args[1])) {
@@ -183,7 +184,7 @@ const commands = {
     },
     async price(msg, args) {
         if (args.length < 1) {
-            await msg.channel.createMessage('To get the price of a coin, use `crypto price [amount] <coin>`. You can use `crypto coins` to see supported coins.');
+            await msg.channel.createMessage(info + 'To get the price of a coin, use `crypto price [amount] <coin>`. You can use `crypto coins` to see supported coins.');
         } else {
             let amount = 1;
             if (args.length === 2) {
@@ -222,7 +223,7 @@ const commands = {
     },
     async shapeshift(msg, args) {
         if (args.length < 2) {
-            await msg.channel.createMessage('To change one coin into another, use `crypto shapeshift <input coin> <output coin>`. You can use `crypto coins` to see supported coins.');
+            await msg.channel.createMessage(info + 'To change one coin into another, use `crypto shapeshift <input coin> <output coin>`. You can use `crypto coins` to see supported coins.');
         } else {
             if (coins[args[0]] !== undefined) {
                 if (coins[args[1]] !== undefined) {
@@ -329,7 +330,7 @@ const commands = {
     },
     async v(msg, args) {
         if (args.length < 1) {
-            await msg.channel.createMessage('This is the command for the entirety of CryptoBot\'s vCurrency (known as CBC). Get started by running `crypto v openaccount` to open an account! Use `crypto v help` to get more information on commands.');
+            await msg.channel.createMessage(info + 'This is the command for the entirety of CryptoBot\'s vCurrency (known as CBC). Get started by running `crypto v openaccount` to open an account! Use `crypto v help` to get more information on commands.');
         } else {
             let hasAccount = await db[`account:${msg.author.id}`].exists();
             switch (args[0]) {
@@ -359,7 +360,7 @@ const commands = {
                     await msg.channel.createMessage(error + 'You don\'t have an account!');
                 } else {
                     if (args.length < 2) {
-                        await msg.channel.createMessage('Are you sure you want to close your account? Run this command again with the `confirm` argument if you are sure. You will lose all CBC inside your account.');
+                        await msg.channel.createMessage('<:ictrash:445293877629419532>  |  Are you sure you want to close your account? Run this command again with the `confirm` argument if you are sure. You will lose all CBC inside your account.');
                     } else { 
                         if (args[1] === 'confirm') {
                             let accDeletionMsg = await msg.channel.createMessage(working + 'Closing your account...');
@@ -411,6 +412,50 @@ const commands = {
                 } else {
                     let balance = await db[`account:${msg.author.id}`].accountTotal.get;
                     await msg.channel.createMessage('You have ' + balance + ' CBC.');
+                }
+                break;
+
+                case 'trade':
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    let balance = await db[`account:${msg.author.id}`].accountTotal.get;
+                    if (balance < 0.00001) {
+                        await msg.channel.createMessage(error + 'You don\'t have enough CBC to trade! You need at least 0.00001 CBC!');
+                    } else {
+                        if (args.length < 3) {
+                            await msg.channel.createMessage(info + 'Provide the user ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>');
+                        } else {
+                            let id = args[1].match(/[<@]*(\d+)>*/);
+                            if (id.length > 1) {
+                                let targetHasAccount = await db[`account:${id[1]}`].exists();
+                                if (!targetHasAccount) {
+                                    await msg.channel.createMessage(error + 'Your target doesn\'t have an account!');
+                                } else {
+                                    let targetBalance = await db[`account:${id[1]}`].accountTotal.get;
+                                    let amountToTrade = parseFloat(args[2]);
+                                    if (isNaN(amountToTrade)) {
+                                        await msg.channel.createMessage(error + 'That\'s not a valid amount.');
+                                    } else {
+                                        if (amountToTrade < 0.00001) {
+                                            await msg.channel.createMessage(error + 'You need to trade at least 0.00001 CBC!');
+                                        } else {
+                                            if (balance >= amountToTrade) {
+                                                let transferMsg = await msg.channel.createMessage(working + 'Transferring ' + amountToTrade + ' CBC to ' + (await bot.getRESTUser(id[1])).username + '...');
+                                                await db[`account:${msg.author.id}`].accountTotal.set(balance - amountToTrade);
+                                                await db[`account:${id[1]}`].accountTotal.set(targetBalance + amountToTrade);
+                                                await transferMsg.edit(success + amountToTrade + ' CBC transferred successfully to ' + (await bot.getRESTUser(id[1])).username + '!');
+                                            } else {
+                                                await msg.channel.createMessage(error + 'You do not have that much CBC!');
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                await msg.channel.createMessage(error + 'Mention a user or use an ID to trade with them!');
+                            }
+                        }
+                    }
                 }
                 break;
 

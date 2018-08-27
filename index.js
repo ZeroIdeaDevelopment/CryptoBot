@@ -424,7 +424,7 @@ const commands = {
                         await msg.channel.createMessage(error + 'You don\'t have enough CBC to trade! You need at least 0.00001 CBC!');
                     } else {
                         if (args.length < 3) {
-                            await msg.channel.createMessage(info + 'Provide the user ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>');
+                            await msg.channel.createMessage(info + 'Provide the user ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>`');
                         } else {
                             let id = args[1].match(/[<@]*(\d+)>*/);
                             if (id.length > 1) {

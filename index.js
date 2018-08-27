@@ -338,7 +338,7 @@ const commands = {
                 await msg.channel.createMessage({
                     embed: {
                         title: 'CryptoBot vCurrency Help',
-                        description: 'help - this message\nopenaccount - open an account\ncloseaccount - close an account\nbalance - get how much CBC you have\nmine - mine some CBC',
+                        description: 'help - this message\nopenaccount - open an account\ncloseaccount - close an account\nbalance - get how much CBC you have\nmine - mine some CBC\ntrade - trade CBC',
                         color: 0x36393f
                     }
                 });

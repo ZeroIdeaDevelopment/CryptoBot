@@ -155,7 +155,7 @@ const commands = {
                 await msg.channel.createMessage(error + 'You don\'t have any addresses set up!');
             }
         } else {
-            let id = args[0].match(/[<@]*(\d+)>*/);
+            let id = args[0].match(/[<@]*!?(\d+)>*/);
             if (id.length > 1) {
                 let hasAddressKey = await db[`addresses:${id[1]}`].exists();
                 if (hasAddressKey) {
@@ -435,9 +435,11 @@ const commands = {
                             let id = args[1].match(/[<@]*(\d+)>*/);
                             let exchangeServer = bot.guilds.get('484409740319784970');
                             if (id.length > 1) {
-                                let memberFilter = exchangeServer.members.get(id);
+                                let memberFilter = exchangeServer.members.get(id[1]);
                                 if (!memberFilter) {
                                     await msg.channel.createMessage(error + 'That bot is not part of the CryptoBot Exchange! Message the bot developers to implement it if you think it should be added!');
+                                } else {
+                                    
                                 }
                             } else {
                                 await msg.channel.createMessage(error + 'Mention a bot or use an ID to exchange CBC!');
@@ -468,7 +470,7 @@ const commands = {
                         if (args.length < 3) {
                             await msg.channel.createMessage(info + 'Provide the ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>`');
                         } else {
-                            let id = args[1].match(/[<@]*(\d+)>*/);
+                            let id = args[1].match(/[<@]*!?(\d+)>*/);
                             if (id.length > 1) {
                                 if (id[1] === msg.author.id) {
                                     await msg.channel.createMessage(error + 'You can\'t trade with yourself!');
@@ -540,7 +542,7 @@ const commands = {
                 if (code.split('\n').length === 1) {
                     func = eval(`async () => ${code}`);
                 } else {
-                    func = eval(`async() => { ${code} }`);
+                    func = eval(`async () => { ${code} }`);
                 }
                 func.bind(this);
                 out += await func();

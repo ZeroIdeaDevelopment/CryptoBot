@@ -156,7 +156,7 @@ const commands = {
             }
         } else {
             let id = args[0].match(/[<@]*!?(\d+)>*/);
-            if (id.length > 1) {
+            if (id && id.length > 1) {
                 let hasAddressKey = await db[`addresses:${id[1]}`].exists();
                 if (hasAddressKey) {
                     let addresses = await db[`addresses:${id[1]}`]();
@@ -434,12 +434,54 @@ const commands = {
                         } else {
                             let id = args[1].match(/[<@]*(\d+)>*/);
                             let exchangeServer = bot.guilds.get('484409740319784970');
-                            if (id.length > 1) {
+                            let exchangeChannel = '484410377619374092';
+                            let exchangeLogChannel = '484410432073760794';
+                            if (exchangeServer.unavailable) {
+                                await msg.channel.createMessage(error + 'The CryptoBot Exchange server is unavailable. Try again later.');
+                            }
+                            if (id && id.length > 1) {
                                 let memberFilter = exchangeServer.members.get(id[1]);
                                 if (!memberFilter) {
                                     await msg.channel.createMessage(error + 'That bot is not part of the CryptoBot Exchange! Message the bot developers to implement it if you think it should be added!');
                                 } else {
-                                    
+                                    let amountToExchange = parseFloat(args[2]);
+                                    if (isNaN(amountToExchange)) {
+                                        await msg.channel.createMessage(error + 'That\'s not a valid amount.');
+                                    } else {
+                                        if (amountToExchange < 0.00001) {
+                                            await msg.channel.createMessage(error + 'You need to exchange at least 0.00001 CBC!');
+                                        } else {
+                                            if (balance >= amountToExchange) {
+                                                let exchangeMsg = await msg.channel.createMessage(working + 'Sending exchange request...');
+                                                await bot.createMessage(exchangeChannel, memberFilter.mention + ' ' + amountToExchange + ' ' + msg.author.id);
+                                                async function awaitForReply(m) {
+                                                    if (m.author.id !== id[1] || m.channel.id !== exchangeChannel) {
+                                                        bot.once('messageCreate', awaitForReply);
+                                                        return;
+                                                    }
+                                                    if (m.content === msg.author.id + ' 0') {
+                                                        await db[`account:${msg.author.id}`].accountTotal.set(balance - amountToExchange);
+                                                        await exchangeMsg.edit(success + 'Exchange complete.');
+                                                        await bot.createMessage(exchangeLogChannel, {embed: {
+                                                            title: 'Transaction Information',
+                                                            description: 'Transaction with ' + memberFilter.mention + ' complete.\n\n' + amountToExchange + ' CBC ~~    >~~ ' + msg.author.id + '\'s balance',
+                                                            timestamp: new Date(),
+                                                            color: 0x36393f
+                                                        }});
+                                                    } else if (m.content === msg.author.id + ' 1') {
+                                                        await exchangeMsg.edit(error + 'An error occurred during the transaction. You have not been charged.');
+                                                    }
+                                                }
+                                                bot.once('messageCreate', awaitForReply);
+                                                setTimeout(async () => {
+                                                    exchangeMsg.edit(error + 'The exchange has timed out.');
+                                                    bot.removeListener('createMessage', awaitForReply);
+                                                });
+                                            } else {
+                                                await msg.channel.createMessage(error + 'You do not have that much CBC!');
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 await msg.channel.createMessage(error + 'Mention a bot or use an ID to exchange CBC!');

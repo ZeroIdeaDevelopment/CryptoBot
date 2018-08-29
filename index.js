@@ -86,7 +86,7 @@ const commands = {
                 if (hasAddressKey) {
                     let addressExists = await db[`addresses:${msg.author.id}`][args[0]].exists();
                     if (addressExists) {
-                        let address = await db[`addresses:${msg.author.id}`][args[0]].get;
+                        let address = await db[`addresses:${msg.author.id}`][args[0]]();
                         let buf = dutb(await QRCode.toDataURL(address, { errorCorrectionLevel: 'H' }));
                         await msg.channel.createMessage({
                             embed: {
@@ -138,7 +138,7 @@ const commands = {
         if (args.length < 1) {
             let hasAddressKey = await db[`addresses:${msg.author.id}`].exists();
             if (hasAddressKey) {
-                let addresses = await db[`addresses:${msg.author.id}`].get;
+                let addresses = await db[`addresses:${msg.author.id}`]();
                 let msgStr = '**The addresses are...**';
                 for (let coin in addresses) {
                     msgStr += '\n**';
@@ -159,7 +159,7 @@ const commands = {
             if (id.length > 1) {
                 let hasAddressKey = await db[`addresses:${id[1]}`].exists();
                 if (hasAddressKey) {
-                    let addresses = await db[`addresses:${id[1]}`].get;
+                    let addresses = await db[`addresses:${id[1]}`]();
                     let msgStr = '**The addresses are...**';
                     for (let coin in addresses) {
                         msgStr += '\n**';
@@ -229,7 +229,7 @@ const commands = {
                 if (coins[args[1]] !== undefined) {
                     let hasAddressKey = await db[`addresses:${msg.author.id}`].exists();
                     if (hasAddressKey) {
-                        let addresses = await db[`addresses:${msg.author.id}`].get;
+                        let addresses = await db[`addresses:${msg.author.id}`]();
                         let inputAddr = addresses[args[0]];
                         let outputAddr = addresses[args[1]];
                         if (inputAddr !== undefined) {
@@ -396,7 +396,7 @@ const commands = {
                             });
                             let json = await res.json();
                             let amount = json.BTC;
-                            let prevTotal = await db[`account:${msg.author.id}`].accountTotal.get;
+                            let prevTotal = await db[`account:${msg.author.id}`].accountTotal();
                             await db[`account:${msg.author.id}`].accountTotal.set(prevTotal + amount);
                             usersMining.splice(usersMining.indexOf(msg.author.id), 1);
                             let awardMsg = success + 'You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
@@ -413,7 +413,7 @@ const commands = {
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
-                    let balance = await db[`account:${msg.author.id}`].accountTotal.get;
+                    let balance = await db[`account:${msg.author.id}`].accountTotal();
                     await msg.channel.createMessage('You have ' + balance + ' CBC.');
                 }
                 break;
@@ -422,7 +422,7 @@ const commands = {
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
-                    let balance = await db[`account:${msg.author.id}`].accountTotal.get;
+                    let balance = await db[`account:${msg.author.id}`].accountTotal();
                     if (balance < 0.00001) {
                         await msg.channel.createMessage(error + 'You don\'t have enough CBC to trade! You need at least 0.00001 CBC!');
                     } else {
@@ -431,25 +431,29 @@ const commands = {
                         } else {
                             let id = args[1].match(/[<@]*(\d+)>*/);
                             if (id.length > 1) {
-                                let targetHasAccount = await db[`account:${id[1]}`].exists();
-                                if (!targetHasAccount) {
-                                    await msg.channel.createMessage(error + 'Your target doesn\'t have an account!');
+                                if (id[1] === msg.author.id) {
+                                    await msg.channel.createMessage(error + 'You can\'t trade with yourself!');
                                 } else {
-                                    let targetBalance = await db[`account:${id[1]}`].accountTotal.get;
-                                    let amountToTrade = parseFloat(args[2]);
-                                    if (isNaN(amountToTrade)) {
-                                        await msg.channel.createMessage(error + 'That\'s not a valid amount.');
+                                    let targetHasAccount = await db[`account:${id[1]}`].exists();
+                                    if (!targetHasAccount) {
+                                        await msg.channel.createMessage(error + 'Your target doesn\'t have an account!');
                                     } else {
-                                        if (amountToTrade < 0.00001) {
-                                            await msg.channel.createMessage(error + 'You need to trade at least 0.00001 CBC!');
+                                        let targetBalance = await db[`account:${id[1]}`].accountTotal();
+                                        let amountToTrade = parseFloat(args[2]);
+                                        if (isNaN(amountToTrade)) {
+                                            await msg.channel.createMessage(error + 'That\'s not a valid amount.');
                                         } else {
-                                            if (balance >= amountToTrade) {
-                                                let transferMsg = await msg.channel.createMessage(working + 'Transferring ' + amountToTrade + ' CBC to ' + (await bot.getRESTUser(id[1])).username + '...');
-                                                await db[`account:${msg.author.id}`].accountTotal.set(balance - amountToTrade);
-                                                await db[`account:${id[1]}`].accountTotal.set(targetBalance + amountToTrade);
-                                                await transferMsg.edit(success + amountToTrade + ' CBC transferred successfully to ' + (await bot.getRESTUser(id[1])).username + '!');
+                                            if (amountToTrade < 0.00001) {
+                                                await msg.channel.createMessage(error + 'You need to trade at least 0.00001 CBC!');
                                             } else {
-                                                await msg.channel.createMessage(error + 'You do not have that much CBC!');
+                                                if (balance >= amountToTrade) {
+                                                    let transferMsg = await msg.channel.createMessage(working + 'Transferring ' + amountToTrade + ' CBC to ' + (await bot.getRESTUser(id[1])).username + '...');
+                                                    await db[`account:${msg.author.id}`].accountTotal.set(balance - amountToTrade);
+                                                    await db[`account:${id[1]}`].accountTotal.set(targetBalance + amountToTrade);
+                                                    await transferMsg.edit(success + amountToTrade + ' CBC transferred successfully to ' + (await bot.getRESTUser(id[1])).username + '!');
+                                                } else {
+                                                    await msg.channel.createMessage(error + 'You do not have that much CBC!');
+                                                }
                                             }
                                         }
                                     }

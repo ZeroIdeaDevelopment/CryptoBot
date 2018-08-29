@@ -6,7 +6,7 @@ const config = require('./config');
 const db = new Redite({
     url: config.redisURL
 });
-const bot = new Eris(config.token, { restMode: true });
+const bot = new Eris(config.token, { restMode: true, getAllUsers: true });
 const path = require('path');
 const fs = require('fs');
 const fetch = require('node-fetch');
@@ -338,7 +338,7 @@ const commands = {
                 await msg.channel.createMessage({
                     embed: {
                         title: 'CryptoBot vCurrency Help',
-                        description: 'help - this message\nopenaccount - open an account\ncloseaccount - close an account\nbalance - get how much CBC you have\nmine - mine some CBC\ntrade - trade CBC',
+                        description: 'help - this message\nopenaccount - open an account\ncloseaccount - close an account\nbalance - get how much CBC you have\nmine - mine some CBC\ntoggledms - toggle DMs from the bot\ntransfer - trade CBC',
                         color: 0x36393f
                     }
                 });
@@ -350,6 +350,7 @@ const commands = {
                 } else {
                     let accCreationMsg = await msg.channel.createMessage(working + 'Creating your account...');
                     await db[`account:${msg.author.id}`].accountTotal.set(0);
+                    await db[`account:${msg.author.id}`].dmsToggled.set(false);
                     await accCreationMsg.edit(success + 'You have opened an account with CryptoBot vCurrency. Run `crypto v help` to get more information!');
                 }
                 break;
@@ -402,7 +403,9 @@ const commands = {
                             let awardMsg = success + 'You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
                             await miningMsg.edit(awardMsg);
                             let dm = await bot.getDMChannel(msg.author.id);
-                            dm.createMessage(awardMsg);
+                            if (await db[`account:${msg.author.id}`].dmsToggled()) {
+                                await dm.createMessage(awardMsg);
+                            }
                         }, randomizedTime * 1000);
                         usersMining.push(msg.author.id);
                     }
@@ -418,7 +421,43 @@ const commands = {
                 }
                 break;
 
-                case 'trade':
+                case 'exchange':
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    let balance = await db[`account:${msg.author.id}`].accountTotal();
+                    if (balance < 0.00001) {
+                        await msg.channel.createMessage(error + 'You don\'t have enough CBC to exchange! You need at least 0.00001 CBC!');
+                    } else {
+                        if (args.length < 3) {
+                            await msg.channel.createMessage(info + 'Provide the ID (or mention) of the bot you want to exchange CBC to, and the amount of CBC! `crypto v exchange <bot id/mention> <amount>`');
+                        } else {
+                            let id = args[1].match(/[<@]*(\d+)>*/);
+                            let exchangeServer = bot.guilds.get('484409740319784970');
+                            if (id.length > 1) {
+                                let memberFilter = exchangeServer.members.get(id);
+                                if (!memberFilter) {
+                                    await msg.channel.createMessage(error + 'That bot is not part of the CryptoBot Exchange! Message the bot developers to implement it if you think it should be added!');
+                                }
+                            } else {
+                                await msg.channel.createMessage(error + 'Mention a bot or use an ID to exchange CBC!');
+                            }
+                        }
+                    }
+                }
+                break;
+
+                case 'toggledms':
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    let isToggled = await db[`account:${msg.author.id}`].dmsToggled();
+                    await db[`account:${msg.author.id}`].dmsToggled.set(!isToggled);
+                    await msg.channel.createMessage(success + `DMs are now ${!isToggled ? 'on' : 'off'}.`);
+                }
+                break;
+
+                case 'transfer':
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
@@ -427,7 +466,7 @@ const commands = {
                         await msg.channel.createMessage(error + 'You don\'t have enough CBC to trade! You need at least 0.00001 CBC!');
                     } else {
                         if (args.length < 3) {
-                            await msg.channel.createMessage(info + 'Provide the user ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>`');
+                            await msg.channel.createMessage(info + 'Provide the ID (or mention) of the user you want to transfer CBC to, and the amount of CBC! `crypto v transfer <user id/mention> <amount>`');
                         } else {
                             let id = args[1].match(/[<@]*(\d+)>*/);
                             if (id.length > 1) {
@@ -495,13 +534,16 @@ const commands = {
                 }
             }
             let out = '```';
+            let code = args.join(' ');
             try {
-                vm.runInNewContext(`function execute() {
-    ${args.join(' ')}
-}
-
-result = execute();`, context, { filename: 'cryptobot.vm' });
-                out += context.result;
+                let func;
+                if (code.split('\n').length === 1) {
+                    func = eval(`async () => ${code}`);
+                } else {
+                    func = eval(`async() => { ${code} }`);
+                }
+                func.bind(this);
+                out += await func();
             } catch (e) {
                 out += e.stack;
             }

@@ -464,7 +464,7 @@ const commands = {
                                                         await exchangeMsg.edit(success + 'Exchange complete.');
                                                         await bot.createMessage(exchangeLogChannel, {embed: {
                                                             title: 'Transaction Information',
-                                                            description: 'Transaction with ' + memberFilter.mention + ' complete.\n\n' + amountToExchange + ' CBC ~~ ​ ​ ​ >~~ ' + msg.author.id + '\'s balance',
+                                                            description: 'Transaction with ' + memberFilter.mention + ' complete.\n\n' + amountToExchange + ' CBC  <:icchevronleft:445293361255940117>  ' + msg.author.id + '\'s balance',
                                                             timestamp: new Date(),
                                                             color: 0x36393f
                                                         }});

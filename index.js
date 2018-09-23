@@ -437,12 +437,12 @@ const commands = {
                             let exchangeChannel = '484410377619374092';
                             let exchangeLogChannel = '484410432073760794';
                             if (exchangeServer.unavailable) {
-                                await msg.channel.createMessage(error + 'The CryptoBot Exchange server is unavailable. Try again later.');
+                                await msg.channel.createMessage(error + 'The vExchange server is unavailable. Try again later.');
                             }
                             if (id && id.length > 1) {
                                 let memberFilter = exchangeServer.members.get(id[1]);
                                 if (!memberFilter) {
-                                    await msg.channel.createMessage(error + 'That bot is not part of the CryptoBot Exchange! Message the bot developers to implement it if you think it should be added!');
+                                    await msg.channel.createMessage(error + 'That bot is not part of the vExchange! Message the bot developers to implement it if you think it should be added!');
                                 } else {
                                     let amountToExchange = parseFloat(args[2]);
                                     if (isNaN(amountToExchange)) {
@@ -476,7 +476,7 @@ const commands = {
                                                 setTimeout(async () => {
                                                     exchangeMsg.edit(error + 'The exchange has timed out.');
                                                     bot.removeListener('createMessage', awaitForReply);
-                                                });
+                                                }, 30000);
                                             } else {
                                                 await msg.channel.createMessage(error + 'You do not have that much CBC!');
                                             }
@@ -612,13 +612,45 @@ bot.on('messageCreate', async msg => {
 
 bot.connect();
 
-bot.on('ready', () => {
-    bot.editStatus({
+bot.on('guildCreate', async () => {
+    await postStats();
+});
+
+bot.on('guildDelete', async () => {
+    await postStats();
+});
+
+bot.on('ready', async () => {
+    await bot.editStatus({
         name: 'the prices of cryptocurrency | crypto help',
 		type: 3
     }); // Watching the prices of cryptocurrency | crypto help
+    await postStats();
 });
 
 function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
+}
+
+async function postStats() {
+    let dblEndpoint = 'https://discordbots.org/api/bots/' + bot.user.id + '/stats';
+    let dbotsEndpoint = 'https://bots.discord.pw/api/bots/' + bot.user.id + '/stats';
+
+    let obj = {
+        server_count: bot.guilds.filter(a => true).length
+    }
+
+    await fetch(dbotsEndpoint, {
+        method: 'POST',
+        body: JSON.stringify(obj),
+        headers: { Authorization: config.dbots, 'Content-Type': 'application/json' }
+    });
+
+    await fetch(dblEndpoint, {
+        method: 'POST',
+        body: JSON.stringify(obj),
+        headers: { Authorization: config.dbl, 'Content-Type': 'application/json' }
+    });
+
+    console.log('stats posted');
 }

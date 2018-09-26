@@ -382,13 +382,15 @@ const commands = {
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
-                    if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(0);
+                    if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(1);
+                    if ((await db[`account:${msg.author.id}`].workers()) === 0) await db[`account:${msg.author.id}`].workers.set(1);
                     let workerCount = await db[`account:${msg.author.id}`].workers(); 
+                    if (!workers[msg.author.id]) workers[msg.author.id] = 0;
                     let workersRunning = workers[msg.author.id];
-                    if (!workersRunning) workersRunning = 0;
+                    console.log(workers);
                     if (workersRunning < workerCount) {
                         workers[msg.author.id] += 1;
-                        let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning}/${workerCount})`);
+                        let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning + 1}/${workerCount})`);
                         let min = Math.ceil(60);
                         let max = Math.floor(120);
                         let randomizedTime = Math.floor(Math.random() * (max - min)) + min;

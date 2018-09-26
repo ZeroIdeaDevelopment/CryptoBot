@@ -57,7 +57,7 @@ const coins = {
     }
 }
 
-let usersMining = [];
+let workers = {};
 
 let weebshitMode = false;
 
@@ -351,6 +351,7 @@ const commands = {
                     let accCreationMsg = await msg.channel.createMessage(working + 'Creating your account...');
                     await db[`account:${msg.author.id}`].accountTotal.set(0);
                     await db[`account:${msg.author.id}`].dmsToggled.set(false);
+                    await db[`account:${msg.author.id}`].workers.set(1);
                     await accCreationMsg.edit(success + 'You have opened an account with CryptoBot vCurrency. Run `crypto v help` to get more information!');
                 }
                 break;
@@ -359,7 +360,7 @@ const commands = {
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account!');
                 } else {
-                    if (usersMining.includes(msg.author.id)) {
+                    if (workers[msg.author.id] !== 0) {
                         await msg.channel.createMessage(error + 'You are currently mining!');
                     } else {
                         if (args.length < 2) {
@@ -381,12 +382,13 @@ const commands = {
                 if (!hasAccount) {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
-                    await db[`account:${msg.author.id}`].isMining.delete();
-                    let isMining = usersMining.includes(msg.author.id);
-                    if (isMining) {
-                        await msg.channel.createMessage(error + 'You\'re already mining!');
+                    if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(0);
+                    let workerCount = await db[`account:${msg.author.id}`].workers(); 
+                    let workersRunning = workers[msg.author.id];
+                    if (workersRunning === workerCount) {
+                        await msg.channel.createMessage(error + 'You\'re running all available workers!');
                     } else {
-                        let miningMsg = await msg.channel.createMessage(working + 'Mining, this takes between 1 and 2 minutes...');
+                        let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning}/${workerCount})`);
                         let min = Math.ceil(60);
                         let max = Math.floor(120);
                         let randomizedTime = Math.floor(Math.random() * (max - min)) + min;
@@ -399,7 +401,7 @@ const commands = {
                             let amount = json.BTC;
                             let prevTotal = await db[`account:${msg.author.id}`].accountTotal();
                             await db[`account:${msg.author.id}`].accountTotal.set(prevTotal + amount);
-                            usersMining.splice(usersMining.indexOf(msg.author.id), 1);
+                            workers[msg.author.id] -= 1;
                             let awardMsg = success + 'You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
                             await miningMsg.edit(awardMsg);
                             let dm = await bot.getDMChannel(msg.author.id);
@@ -407,7 +409,7 @@ const commands = {
                                 await dm.createMessage(awardMsg);
                             }
                         }, randomizedTime * 1000);
-                        usersMining.push(msg.author.id);
+                        workers[msg.author.id] += 1;
                     }
                 }
                 break;

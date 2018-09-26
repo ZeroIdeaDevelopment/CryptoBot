@@ -388,6 +388,7 @@ const commands = {
                     if (workersRunning === workerCount) {
                         await msg.channel.createMessage(error + 'You\'re running all available workers!');
                     } else {
+                        workers[msg.author.id] += 1;
                         let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning}/${workerCount})`);
                         let min = Math.ceil(60);
                         let max = Math.floor(120);
@@ -409,7 +410,6 @@ const commands = {
                                 await dm.createMessage(awardMsg);
                             }
                         }, randomizedTime * 1000);
-                        workers[msg.author.id] += 1;
                     }
                 }
                 break;

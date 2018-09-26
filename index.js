@@ -429,8 +429,9 @@ const commands = {
                             await msg.channel.createMessage(error + 'You do not have enough CBC! Workers cost 0.0003 CBC.');
                         } else {
                             let m = await msg.channel.createMessage(working + 'Making your purchase...');
-                            await db[`account:${msg.author.id}`].accountTotal.set(balance - 0.0003);
+                            workerCount = await db[`account:${msg.author.id}`].workers(); // reget workercount before making the purchase just in case it changes
                             await db[`account:${msg.author.id}`].workers.set(workerCount + 1);
+                            await db[`account:${msg.author.id}`].accountTotal.set(balance - 0.0003);
                             await m.edit(success + 'You have purchased a worker! You now have ' + (workerCount + 1) + ' workers!');
                         }
                     } else {

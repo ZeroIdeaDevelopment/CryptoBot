@@ -384,6 +384,7 @@ const commands = {
                 } else {
                     if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(0);
                     let workerCount = await db[`account:${msg.author.id}`].workers(); 
+                    if (!workers[msg.author.id]) workers[msg.author.id] = 0;
                     let workersRunning = workers[msg.author.id];
                     if (workersRunning < workerCount) {
                         workers[msg.author.id] += 1;

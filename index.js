@@ -387,7 +387,6 @@ const commands = {
                     let workerCount = await db[`account:${msg.author.id}`].workers(); 
                     if (!workers[msg.author.id]) workers[msg.author.id] = 0;
                     let workersRunning = workers[msg.author.id];
-                    console.log(workers);
                     if (workersRunning < workerCount) {
                         workers[msg.author.id] += 1;
                         let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning + 1}/${workerCount})`);

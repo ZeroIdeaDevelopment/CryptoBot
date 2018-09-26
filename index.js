@@ -385,9 +385,7 @@ const commands = {
                     if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(0);
                     let workerCount = await db[`account:${msg.author.id}`].workers(); 
                     let workersRunning = workers[msg.author.id];
-                    if (workersRunning === workerCount) {
-                        await msg.channel.createMessage(error + 'You\'re running all available workers!');
-                    } else {
+                    if (workersRunning < workerCount) {
                         workers[msg.author.id] += 1;
                         let miningMsg = await msg.channel.createMessage(working + `A miner worker has been started, it will complete within 1 and 2 minutes... (${workersRunning}/${workerCount})`);
                         let min = Math.ceil(60);
@@ -403,13 +401,38 @@ const commands = {
                             let prevTotal = await db[`account:${msg.author.id}`].accountTotal();
                             await db[`account:${msg.author.id}`].accountTotal.set(prevTotal + amount);
                             workers[msg.author.id] -= 1;
-                            let awardMsg = success + 'You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
+                            let awardMsg = success + 'Worker finished! You have been given ' + amount + ' CBC! Check your balance using `crypto v balance`.';
                             await miningMsg.edit(awardMsg);
                             let dm = await bot.getDMChannel(msg.author.id);
                             if (await db[`account:${msg.author.id}`].dmsToggled()) {
                                 await dm.createMessage(awardMsg);
                             }
                         }, randomizedTime * 1000);
+                        
+                    } else {
+                        await msg.channel.createMessage(error + 'You\'re running all available workers!');
+                    }
+                }
+                break;
+
+                case 'buyworker':
+                if (!hasAccount) {
+                    await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
+                } else {
+                    if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(0);
+                    let workerCount = await db[`account:${msg.author.id}`].workers();
+                    if (workerCount < 4) {
+                        let balance = await db[`account:${msg.author.id}`].accountTotal();
+                        if (balance < 0.0003) {
+                            await msg.channel.createMessage(error + 'You do not have enough CBC! Workers cost 0.0003 CBC.');
+                        } else {
+                            let m = await msg.channel.createMessage(working + 'Making your purchase...');
+                            await db[`account:${msg.author.id}`].accountTotal.set(balance - 0.0003);
+                            await db[`account:${msg.author.id}`].workers.set(workerCount + 1);
+                            await m.edit(success + 'You have purchased a worker! You now have ' + (workerCount + 1) + ' workers!');
+                        }
+                    } else {
+                        await msg.channel.createMessage(error + 'You have maxed out your worker count!');
                     }
                 }
                 break;

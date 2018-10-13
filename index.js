@@ -383,7 +383,7 @@ const commands = {
                     await msg.channel.createMessage(error + 'You don\'t have an account! Run `crypto v openaccount` to make one!');
                 } else {
                     if (!(await db[`account:${msg.author.id}`].workers.exists())) await db[`account:${msg.author.id}`].workers.set(1);
-                    if ((await db[`account:${msg.author.id}`].workers()) === 0) await db[`account:${msg.author.id}`].workers.set(1);
+                    if ((await db[`account:${msg.author.id}`].workers === 0) await db[`account:${msg.author.id}`].workers.set(1);
                     let workerCount = await db[`account:${msg.author.id}`].workers; 
                     if (!workers[msg.author.id]) workers[msg.author.id] = 0;
                     let workersRunning = workers[msg.author.id];

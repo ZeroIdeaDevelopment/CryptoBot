@@ -662,15 +662,19 @@ function clamp(num, min, max) {
 
 async function postStats() {
     let dblEndpoint = 'https://discordbots.org/api/bots/' + bot.user.id + '/stats';
-    let dbotsEndpoint = 'https://bots.discord.pw/api/bots/' + bot.user.id + '/stats';
+    let dbotsEndpoint = 'https://discord.bots.gg/api/v1/bots/' + bot.user.id + '/stats';
 
     let obj = {
-        server_count: bot.guilds.filter(a => true).length
+        server_count: bot.guilds.length
+    }
+
+    let obj2 = {
+        guildCount: bot.guilds.length
     }
 
     await fetch(dbotsEndpoint, {
         method: 'POST',
-        body: JSON.stringify(obj),
+        body: JSON.stringify(obj2),
         headers: { Authorization: config.dbots, 'Content-Type': 'application/json' }
     });
 

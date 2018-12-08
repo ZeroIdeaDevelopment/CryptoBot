@@ -665,11 +665,11 @@ async function postStats() {
     let dbotsEndpoint = 'https://discord.bots.gg/api/v1/bots/' + bot.user.id + '/stats';
 
     let obj = {
-        server_count: bot.guilds.count
+        server_count: bot.guilds.size
     }
 
     let obj2 = {
-        guildCount: bot.guilds.count
+        guildCount: bot.guilds.size
     }
 
     await fetch(dbotsEndpoint, {

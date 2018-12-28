@@ -65,10 +65,10 @@ const commands = {
     async help(msg) {
         await msg.channel.createMessage({embed: {
             title: 'CryptoBot Help',
-            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price\nshapeshift - turn one coin into another\nv - vCurrency',
+            description: 'help - this message\ncredits - get some information about how the bot was made\naddress - set a coin address\naddresses - get addresses for yourself or another user\ncode - generate a QR code so that people can pay you cryptocurrency\ncoins - get supported coins\nprice - get a coin price\nv - vCurrency',
             color: 0x36393f,
-            footer: { icon_url: 'attachment://shapeshift.png', text: 'ShapeShift onboard | https://github.com/ZeroIdeaDevelopment/CryptoBot' }
-        }}, { file: await require('util').promisify(fs.readFile)(path.resolve('./img/shapeshift.png')), name: 'shapeshift.png' });
+            footer: { text: 'https://github.com/ZeroIdeaDevelopment/CryptoBot' }
+        }});
     },
     async credits(msg) {
         await msg.channel.createMessage({embed: {
@@ -222,7 +222,8 @@ const commands = {
         }
     },
     async shapeshift(msg, args) {
-        if (args.length < 2) {
+        await msg.channel.createMessage(error + 'Shapeshift has been removed.');
+        /*if (args.length < 2) {
             await msg.channel.createMessage(info + 'To change one coin into another, use `crypto shapeshift <input coin> <output coin>`. You can use `crypto coins` to see supported coins.');
         } else {
             if (coins[args[0]] !== undefined) {
@@ -326,7 +327,7 @@ const commands = {
             } else {
                 await msg.channel.createMessage(error + 'The input coin isn\'t supported. You can use `crypto coins` to see supported coins.');
             }
-        }
+        } */
     },
     async v(msg, args) {
         if (args.length < 1) {
